@@ -1,0 +1,11 @@
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
+
+ENV HOME "/root"
+ENV PIP_DOWNLOAD_CACHE="$HOME/.pip/cache"
+ENV TORTOISE_MODELS_DIR=/models
+
+WORKDIR /tortoise
+COPY . .
+
+RUN pip install typing-extensions==4.6.1 transformers==4.31.0 rotary-embedding-torch==0.4.0 && \
+    python setup.py install

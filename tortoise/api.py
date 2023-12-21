@@ -39,13 +39,46 @@ MODELS = {
     'rlg_diffuser.pth': 'https://huggingface.co/jbetker/tortoise-tts-v2/resolve/main/.models/rlg_diffuser.pth',
 }
 
+def download_models(specific_models=None):
+    """
+    Call to download all the models that Tortoise uses.
+    """
+    os.makedirs(MODELS_DIR, exist_ok=True)
+
+    def show_progress(block_num, block_size, total_size):
+        global pbar
+        if pbar is None:
+            pbar = progressbar.ProgressBar(maxval=total_size)
+            pbar.start()
+
+        downloaded = block_num * block_size
+        if downloaded < total_size:
+            pbar.update(downloaded)
+        else:
+            pbar.finish()
+            pbar = None
+    for model_name, url in MODELS.items():
+        if specific_models is not None and model_name not in specific_models:
+            continue
+        model_path = os.path.join(MODELS_DIR, model_name)
+        if os.path.exists(model_path):
+            continue
+        print(f'Downloading {model_name} from {url}...')
+        request.urlretrieve(url, model_path, show_progress)
+        print('Done.')
+
 def get_model_path(model_name, models_dir=MODELS_DIR):
     """
     Get path to given model, download it if it doesn't exist.
     """
     if model_name not in MODELS:
         raise ValueError(f'Model {model_name} not found in available models.')
-    model_path = hf_hub_download(repo_id="Manmay/tortoise-tts", filename=model_name, cache_dir=models_dir)
+    try:
+        model_path = hf_hub_download(repo_id="Manmay/tortoise-tts", filename=model_name, cache_dir=models_dir)
+    except Exception:
+        model_path = os.path.join(models_dir, model_name)
+        if not os.path.exists(model_path) and models_dir == MODELS_DIR:
+            download_models([model_name])
     return model_path
 
 
@@ -315,6 +348,7 @@ class TextToSpeech:
             'fast': {'num_autoregressive_samples': 96, 'diffusion_iterations': 80},
             'standard': {'num_autoregressive_samples': 256, 'diffusion_iterations': 200},
             'high_quality': {'num_autoregressive_samples': 256, 'diffusion_iterations': 400},
+            'ultra_high': {'num_autoregressive_samples': 4096, 'diffusion_iterations': 4000},
         }
         settings.update(presets[preset])
         settings.update(kwargs) # allow overriding of preset settings with kwargs
